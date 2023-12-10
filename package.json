@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "exif": "^0.6.0",
-    "exiftool-vendored": "^24.1.0"
+    "exiftool-vendored": "^24.1.0",
+    "utimes": "^5.2.1"
   }
 }

@@ -1,5 +1,6 @@
 const exiftool = require('exiftool-vendored').exiftool;
 const fs = require("fs")
+const utimes = require("utimes")
 
 const src = "F:\\Clean\\Media\\iPhone"
 
@@ -17,7 +18,7 @@ const prefixes = {
     png: "Screenshot"
 }
 
-async function getNewName(path, file, extension, item) {
+async function getNew(path, file, extension, item) {
     const tags = await exiftool.read(src + "\\" + item)
 
     let builder = src + "\\OUT\\" + (extension == "png" ? "Screenshots" : "DCIM\\Camera") + "\\" + prefixes[extension] + "_"
@@ -30,9 +31,11 @@ async function getNewName(path, file, extension, item) {
     else {
         const replacedItem = item.replace("IMG_E", "IMG_")
         if (file.startsWith("IMG_E") && fs.existsSync(src + "\\" + replacedItem))
-            return await getNewName(path, file.replace("IMG_E", "IMG_"), extension, replacedItem)
+            return await getNew(path, file.replace("IMG_E", "IMG_"), extension, replacedItem)
 
-        return src + "\\OUT\\Error\\" + path.replace("\\", "_") + "_" + file.replace("\\", "_") + "." + extension
+        return {
+            destination: src + "\\OUT\\Error\\" + path.replace("\\", "_") + "_" + file.replace("\\", "_") + "." + extension
+        }
     }
 
     if (extension != "png")
@@ -50,7 +53,7 @@ async function getNewName(path, file, extension, item) {
         console.log("EXISTS", builder, fs.existsSync(builder));
     }
 
-    return builder
+    return { destination: builder, date: new Date(date.year, date.month - 1, date.day, date.hour, date.minute, date.second) }
 }
 
 
@@ -66,16 +69,20 @@ async function main() {
 
             if (!prefixes.hasOwnProperty(extension))
                 continue
+
             count++
             console.log("------------------------------")
             console.log("FROM", src + "\\" + item)
 
-            const destination = await getNewName(path, file, extension, item)
+            const { destination, date } = await getNew(path, file, extension, item)
 
             console.log("TO", destination)
             console.log("------------------------------")
 
             fs.copyFileSync(src + "\\" + item, destination)
+
+            if (date)
+                await utimes.utimes(destination, { btime: date })
         }
     }
 
